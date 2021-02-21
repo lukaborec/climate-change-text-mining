@@ -16,4 +16,4 @@ with following arguments:
 
 `--frame` (0 or 1) — whether to use frame-specific information for ranking or not. Optional, defaults to 0.
 
-
+`--criterion` ("cosine", "wmd") — the criterion used for rakning. Opeional, defaults to "cosine".
