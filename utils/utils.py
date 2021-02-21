@@ -1,16 +1,22 @@
 import pandas as pd
+import numpy as np
+from scipy.spatial import distance
 import os
 import pathlib
 import argparse
 
 def clean(cc_list):
-    """Cleans the list of climate change words."""
+    '''
+    Cleans the list of climate change words.
+    '''
     cc_list = [w.replace("\n", "") for w in cc_list]
     cc_list = [w.replace(" ", "_") for w in cc_list]
     return cc_list
 
 def load_cc_words(type="normal"):
-    '''Loads the glosssaries of climate change words.'''
+    '''
+    Loads the glosssaries of climate change words.
+    '''
     if type == "normal":
         cc_words = open("data/resources/CCglossaryWiki.txt", "r").readlines()
         cc_words = clean(cc_words)
@@ -21,7 +27,9 @@ def load_cc_words(type="normal"):
         return cc_words
 
 def load_corpus():
-    '''Loads the corpus and returns a list of (article_name, article_text) tuples.'''
+    '''
+    Loads the corpus and returns a a dictionary with "ScienceOCR" and "NatureOCR" as keys and articles (name_text) tuples as the key's element.
+    '''
     # Get the one-level-up path which is where the "data" folder resides
     parent_dir = pathlib.Path(__file__).parents[1]
     corpus_dir = parent_dir.joinpath("data")
@@ -48,6 +56,9 @@ def load_corpus():
     return corpus                               # e.g. [(348181a0.txt, "blah blah), (...)]
 
 def load_master_table():
+    '''
+    Loads the master table with annotations (the table is provided by Hulme et al).
+    '''
     parent_dir = pathlib.Path(__file__).parents[1]
     resource_dir = parent_dir.joinpath("data/resources")
     table = pd.read_csv(os.path.join(resource_dir,"master_table.tsv"), delimiter="\t")

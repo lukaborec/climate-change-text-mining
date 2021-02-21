@@ -86,9 +86,11 @@ def get_frame_keywords():
         frame_embeddings[frame] = embeddings
 
     # save embeddings to data/resources
+    with open(os.path.join(resource_dir, "{}.pkl".format("frame_embeddings_dict")), "wb") as file:
+        pickle.dump(frame_embeddings, file)
     with open(os.path.join(resource_dir, "{}.pkl".format("frame_keywords_dict")), "wb") as file:
         pickle.dump(frame_embeddings, file)
-    print("Frame keywords saved to data/resources!")
+    print("Frame keywords and embeddings saved to data/resources!")
 
 if __name__ == "__main__":
     get_frame_keywords()
