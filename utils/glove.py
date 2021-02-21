@@ -71,6 +71,8 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
                     query = cc_embedding
             else:
                 query = cc_embedding
+                if criterion == "wmd":
+                    query = [word for word in cc_embeding if word in glove_embeddings.vocab]
 
             # Split the article into sentences
             sentences = []
