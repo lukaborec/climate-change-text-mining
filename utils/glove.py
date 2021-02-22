@@ -1,6 +1,9 @@
 import numpy as np
 import pathlib
 import os
+import nltk
+from nltk.corpus import stopwords
+from scipy.spatial import distance
 from spacy.lang.en import English
 from spacy.tokenizer import Tokenizer
 from spacy.pipeline import Sentencizer
@@ -18,7 +21,7 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
     Arguments:
     corpus          — the corpus
     glossary        — list of climate change words
-    frame_keywords  — frame-specific embeddings retrieved from tf-idf keyword extraction
+    frame_keywords  — frame-specific embeddings/keywords retrieved from tf-idf keyword extraction
     length          — the length to reduce the article to
     criterion       — ranking criterion: cosine, wmd
     """
@@ -28,7 +31,7 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
     if frame_keywords != None:
         target_dir = parent_dir.joinpath("results/glove-top-{}-percent-with-frame-embeddings-{}".format(int(length*100),criterion))
     elif frame_keywords == None:
-        target_dir = parent_dir.joinpath("results/glove-top-{}-percent".format(int(length*100)))
+        target_dir = parent_dir.joinpath("results/glove-top-{}-percent-{}".format(int(length*100),criterion))
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
@@ -37,12 +40,15 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
     nlp.add_pipe("sentencizer")
     tokenizer = Tokenizer(nlp.vocab)
 
-    # initialize GloVe embeddings
+    # Initialize GloVe embeddings
     print("Loading GloVe embeddings...")
     glove_embeddings = gensim.downloader.load("glove-wiki-gigaword-300")
 
-    # create a generic climate change embedding
-    cc_words = [word for word in glossary if word in glove_embeddings.vocab]
+    # Download stop cc_words
+    stop_words = stopwords.words("english")
+
+    # Create a generic climate change embedding
+    cc_words = [word.lower() for word in glossary if word.lower() in glove_embeddings.vocab]
     cc_embedding = glove_embeddings[cc_words]
     cc_embedding = np.mean(cc_embedding, axis=0)
 
@@ -56,6 +62,12 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
         if not os.path.exists(target_dir_folder):
             os.makedirs(target_dir_folder)
 
+        # Query for the case when not using frame-specific information
+        if criterion == "cosine":
+            query = cc_embedding
+        elif criterion == "wmd":
+            query = cc_words
+
         # Loop over articles
         for article in corpus[key]:
             if frame_keywords != None: # i.e. if frame_keywords == 1
@@ -64,15 +76,14 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
                 try: # This is needed because some articles have missing values for framing in the master table
                     category = table[table['txt']==art]["Labels_dominant"].values[0] # retrieves the frame
                     if criterion == "wmd":
-                        query = [word for word in frame_keywords[category] if word in glove_embeddings.vocab] # retrieves the frame's embedding
+                        query = [word.lower() for word in frame_keywords[category] if word.lower() in glove_embeddings.vocab] # retrieves the frame's embedding
                     elif criterion == "cosine":
                         query = frame_keywords[category]
                 except: # In case an article doesnt have a framing in the master table, we use cc_embedding instead
-                    query = cc_embedding
-            else:
-                query = cc_embedding
-                if criterion == "wmd":
-                    query = [word for word in cc_embeding if word in glove_embeddings.vocab]
+                    if criterion == "cosine":
+                        query = cc_embedding
+                    elif criterion == "wmd":
+                        query == cc_words
 
             # Split the article into sentences
             sentences = []
@@ -87,8 +98,11 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
             for sent in sentences:
                 # Create sentence embedding
                 sentence = [token.orth_ for token in tokenizer(sent)]
+                sentence = [word.lower() for word in sentence if word.lower() in glove_embeddings.vocab and word.lower() not in stop_words]
+                if len(sentence)==0:
+                    continue
                 if criterion == "cosine":
-                    sent_embedding = embeddings[sentence]
+                    sent_embedding = glove_embeddings[sentence]
                     sent_embedding = np.mean(sent_embedding, axis=0)
                     scores.append((sent, distance.cosine(query, sent_embedding)))
                 elif criterion == "wmd":
@@ -98,6 +112,5 @@ def rank(corpus, glossary, frame_keywords, length, criterion):
             write_file = target_dir_folder.joinpath("{}".format(article[0]))
             with open(write_file, "w") as file:
                 for sent in sorted(scores, key=lambda x: x[1], reverse=0)[:keep_length]:
-                    s = sent[0].strip() + " "
-                    file.write(s)
+                    file.write(sent[0].strip() + " ")
     print("Done!")

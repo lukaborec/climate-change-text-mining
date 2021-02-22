@@ -20,8 +20,8 @@ def get_frame_keywords():
     nlp = English()
     nlp.add_pipe("sentencizer")
     tokenizer = Tokenizer(nlp.vocab)
-    print("Loading word2vec embeddings...")
-    word2vec = gensim.downloader.load("word2vec-google-news-300")
+    print("Loading glove_embeddings...")
+    glove_embeddings = gensim.downloader.load("glove-wiki-gigaword-300")
     # get parent and resource directory for loading and saving stuff
     parent_dir = pathlib.Path(__file__).parents[1]
     resource_dir = parent_dir.joinpath("data/resources")
@@ -80,8 +80,8 @@ def get_frame_keywords():
     frame_embeddings = {}
     for frame, keywords in frame_keywords.items():
         frame_keywords[frame] += cc_words # add cc words to each framing - should this be done?
-        kwords = [word for word in keywords if word in word2vec.vocab]
-        embeddings = word2vec[kwords]
+        kwords = [word for word in keywords if word in glove_embeddings.vocab]
+        embeddings = glove_embeddings[kwords]
         embeddings = np.mean(embeddings, axis=0)
         frame_embeddings[frame] = embeddings
 
@@ -89,7 +89,7 @@ def get_frame_keywords():
     with open(os.path.join(resource_dir, "{}.pkl".format("frame_embeddings_dict")), "wb") as file:
         pickle.dump(frame_embeddings, file)
     with open(os.path.join(resource_dir, "{}.pkl".format("frame_keywords_dict")), "wb") as file:
-        pickle.dump(frame_embeddings, file)
+        pickle.dump(frame_keywords, file)
     print("Frame keywords and embeddings saved to data/resources!")
 
 if __name__ == "__main__":
